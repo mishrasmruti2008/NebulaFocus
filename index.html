@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NebulaFocus | Multiplayer Co-Working & Pomodoro</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Supabase & PeerJS CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+  <!-- Animated Cosmic Background -->
+  <div class="galaxy-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- 1. AUTHENTICATION SCREEN -->
+  <section id="auth-screen" class="screen active">
+    <div class="glass-card auth-card">
+      <div class="brand-badge">🌌 MULTIPLAYER STUDYVERSE</div>
+      <h1>Nebula<span>Focus</span></h1>
+      <p class="subtitle">Sync timers. Lock in silently. Hang out on breaks.</p>
+
+      <div class="auth-tabs">
+        <button id="tab-login" class="active" onclick="switchAuthMode('login')">Log In</button>
+        <button id="tab-signup" onclick="switchAuthMode('signup')">Create Account</button>
+      </div>
+
+      <form id="auth-form">
+        <div class="input-group" id="username-group" style="display: none;">
+          <label>Display Name (Visible to friends)</label>
+          <input type="text" id="username-input" placeholder="e.g., Alex" />
+        </div>
+        <div class="input-group">
+          <label>Email ID</label>
+          <input type="email" id="email-input" required placeholder="you@example.com" />
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input type="password" id="password-input" required placeholder="••••••••" minlength="6" />
+        </div>
+        <button type="submit" class="btn-primary" id="auth-submit-btn">Enter Studyverse</button>
+        <p id="auth-error" class="error-msg"></p>
+      </form>
+    </div>
+  </section>
+
+  <!-- 2. MAIN WORKSPACE SCREEN -->
+  <section id="app-screen" class="screen">
+    <!-- Top Navbar -->
+    <header class="navbar glass-panel">
+      <div class="nav-brand">🌌 Nebula<span>Focus</span></div>
+      
+      <div class="room-controls">
+        <span class="room-badge">Room ID: <strong id="current-room-id">---</strong></span>
+        <button class="btn-secondary btn-sm" onclick="copyInviteLink()">📋 Copy Invite Link</button>
+        <input type="text" id="join-room-input" placeholder="Paste friend's Room ID" />
+        <button class="btn-accent btn-sm" onclick="joinFriendRoom()">Join Room</button>
+      </div>
+
+      <div class="nav-actions">
+        <button class="btn-secondary btn-sm" onclick="toggleDashboard()">📊 Analytics</button>
+        <button class="btn-danger btn-sm" onclick="logout()">Logout</button>
+      </div>
+    </header>
+
+    <!-- Main 3-Column Grid -->
+    <main class="workspace-grid">
+      
+      <!-- LEFT: Live Video & Audio Pods -->
+      <div class="glass-panel video-section">
+        <div class="panel-header">
+          <h3>🎥 Study Pod</h3>
+          <span id="av-status-badge" class="status-pill break">Break Mode: Cam/Mic Live</span>
+        </div>
+        
+        <div class="video-grid" id="video-grid">
+          <div class="video-wrapper">
+            <video id="local-video" autoplay muted playsinline></video>
+            <div class="video-overlay" id="local-overlay">
+              <span>🔒 Focus Mode Active (A/V Paused)</span>
+            </div>
+            <span class="name-tag" id="local-name-tag">You</span>
+          </div>
+          <!-- Friend videos get injected here dynamically -->
+        </div>
+
+        <div class="media-toggles">
+          <button id="btn-toggle-mic" class="btn-secondary" onclick="manualToggleMic()">🎤 Mic On</button>
+          <button id="btn-toggle-cam" class="btn-secondary" onclick="manualToggleCam()">📷 Cam On</button>
+        </div>
+      </div>
+
+      <!-- CENTER: Pomodoro Core -->
+      <div class="glass-panel timer-section">
+        <div class="mode-selector">
+          <button class="preset-btn active" data-study="25" data-break="5" onclick="selectPreset(25, 5, this)">25 / 5</button>
+          <button class="preset-btn" data-study="45" data-break="15" onclick="selectPreset(45, 15, this)">45 / 15</button>
+          <button class="preset-btn" data-study="50" data-break="10" onclick="selectPreset(50, 10, this)">50 / 10</button>
+        </div>
+
+        <div class="timer-ring">
+          <div class="phase-label" id="phase-label">READY TO FOCUS</div>
+          <div class="time-display" id="time-display">25:00</div>
+          <div class="cycle-info" id="cycle-info">25m Study • 5m Break</div>
+        </div>
+
+        <div class="timer-controls">
+          <button id="btn-start-timer" class="btn-primary btn-lg" onclick="startSyncedTimer()">▶ Start Study Session</button>
+          <button id="btn-reset-timer" class="btn-secondary" onclick="resetSyncedTimer()">↺ Reset</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Today's Session To-Do List -->
+      <div class="glass-panel todo-section">
+        <div class="panel-header">
+          <h3>📝 Today's Tasks</h3>
+          <span id="task-counter" class="badge">0 Tasks</span>
+        </div>
+
+        <form id="todo-form" class="todo-input-row">
+          <input type="text" id="todo-input" placeholder="Task for next Pomodoro..." required />
+          <button type="submit" class="btn-accent">+</button>
+        </form>
+
+        <ul id="todo-list" class="todo-list">
+          <!-- Tasks injected via JS -->
+        </ul>
+      </div>
+
+    </main>
+  </section>
+
+  <!-- 3. DAILY & WEEKLY ANALYTICS MODAL -->
+  <div id="dashboard-modal" class="modal-backdrop">
+    <div class="glass-card dashboard-card">
+      <div class="panel-header">
+        <h2>📊 Your Focus Analytics</h2>
+        <button class="btn-secondary btn-sm" onclick="toggleDashboard()">✕ Close</button>
+      </div>
+
+      <div class="stats-summary">
+        <div class="stat-box">
+          <span class="stat-title">Today's Study Time</span>
+          <span class="stat-value" id="today-minutes">0 mins</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-title">This Week (Last 7 Days)</span>
+          <span class="stat-value" id="week-minutes">0 mins</span>
+        </div>
+      </div>
+
+      <h4>Weekly Focus Breakdown</h4>
+      <div class="bar-chart" id="weekly-chart">
+        <!-- 7-day bars injected via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/webrtc.js"></script>
+  <script src="js/timer.js"></script>
+  <script src="js/todo.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
